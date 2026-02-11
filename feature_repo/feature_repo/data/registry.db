@@ -8,7 +8,7 @@ k
 K
 productFashion product identifier"
 product_idJfashion_price_prediction
-Ü³ÌğÏ–Ü³ÌğÏ–1"$ce842129-559e-4ab0-a072-7e89340695c2*Ü´Ì¨¢‘¢2ß
+Ü³ÌğÏ–Ü³ÌğÏ–1"$6e728bb0-d83f-47b7-aa0b-cf4904b28d1b*ˆ’´Ìˆ¥ğÇ2ñ
 ¹
 fashion_price_featuresfashion_price_predictionproduct"
 price_min_7d"
@@ -31,12 +31,13 @@ region_cat"
 age_group_cat"*
 inventory_level"Inventory level 1-100"-
 price_dropped"Target: 1 if price dropped*
-teamprice_prediction2€£:¶event_timestamp*createdZ%#data/fashion_price_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_source’Ù´Ì²ß’"Ù´Ì²ß’@b
+teamprice_prediction2€£:¶event_timestamp*createdZ%#data/fashion_price_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_source’…’´Ì¨ËÈ™"…’´Ì¨ËÈ™@b
 
-product_id 
-Ü³Ìè–¤–Ü´Ìè¢ü¡
+product_id²
+Ü³Ìè–¤–ˆ’´Ì¨€İÇ
 èú­Ì°½÷«æ³Ì
 æ³Ì€àŸ½
+€Èõ¼€àŸ½
 €Èõ¼€àŸ½
 €Èõ¼€àŸ½
 €Èõ¼€àŸ½
