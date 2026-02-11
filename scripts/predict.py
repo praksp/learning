@@ -26,8 +26,19 @@ def main(
 
     products = pd.read_csv(products_path)
     price_history = pd.read_csv(price_history_path)
+    if "region" not in products.columns:
+        products["region"] = "North"
+    if "age_group" not in products.columns:
+        products["age_group"] = "25-34"
 
     df = build_features(products, price_history)
+    try:
+        inventory = pd.read_csv(ROOT / "data" / "inventory.csv")
+        df = df.merge(inventory[["product_id", "inventory_level"]], on="product_id", how="left")
+    except FileNotFoundError:
+        df["inventory_level"] = 50
+    if "inventory_level" in df.columns:
+        df["inventory_level"] = df["inventory_level"].fillna(50)
     model = PriceChangeModel.load(model_path)
 
     df["prob_price_drop"] = model.predict_proba(df)["prob_drop"]
