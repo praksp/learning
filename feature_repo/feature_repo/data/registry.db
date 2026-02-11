@@ -1,0 +1,62 @@
+
+O
+/
+__dummy"
+__dummy_idJfashion_price_prediction
+‹ù≥Ã‰óñ‹ù≥Ã‰óñ
+k
+K
+productFashion product identifier"
+product_idJfashion_price_prediction
+‹ù≥Ãœûñ‹ù≥Ãœûñ1"$fdcb13f7-4644-4c6f-b8c8-223fc0fabba0*óû≥Ã®˜ÎF2∆
+Í
+fashion_price_featuresfashion_price_predictionproduct"
+price_min_7d"
+price_max_7d"
+price_mean_7d"
+price_std_7d"
+price_change_7d"
+price_change_pct_7d"
+price_volatility_7d"
+num_price_drops_7d"
+original_price_usd"
+category_cat"
+	brand_cat"
+subcategory_cat"
+	color_cat"
+
+season_cat"-
+price_dropped"Target: 1 if price dropped*
+teamprice_prediction2Ä£:∂event_timestamp*createdZ%#data/fashion_price_features.parquetä1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_sourceí‹ù≥Ã–Ò–å"‹ù≥Ã»¬ãñ@b
+
+product_idW
+‹ù≥ÃËñ§ñóû≥Ã∏¯€F
+Ë˙≠Ã∞Ω˜´Êù≥Ã
+Êù≥ÃÄ‡üΩ
+Ä»ıºÄ‡üΩ:ı
+‘
+price_predictionfashion_price_predictionÛ
+fashion_price_features
+price_min_7d
+price_max_7d
+price_mean_7d
+price_std_7d
+price_change_7d
+price_change_pct_7d
+price_volatility_7d
+num_price_drops_7d
+original_price_usd
+category_cat
+	brand_cat
+subcategory_cat
+	color_cat
+
+season_cat-
+price_dropped"Target: 1 if price dropped*created:createdBÇevent_timestamp*createdZ%#data/fashion_price_features.parquet¢fashion_price_features_sourceí‹ù≥Ã–Ò–å"‹ù≥Ã»¬ãñ*0Features for fashion price drop prediction model
+‹ù≥Ã–‚∑ñ‹ù≥Ã–‚∑ñR¿
+Ω
+,feast.infra.online_stores.sqlite.SqliteTable"å
+Y/Users/prakash/ml-learning/cursor/learning/feature_repo/feature_repo/data/online_store.db/fashion_price_prediction_fashion_price_featuresb—event_timestamp*createdZ%#data/fashion_price_features.parquetä1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_source™fashion_price_predictioní‹ù≥Ã–Ò–å"‹ù≥Ã»¬ãñä:
+
+fashion_price_prediction
+‹ù≥ÃêπÀç‹ù≥ÃêπÀç

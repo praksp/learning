@@ -39,6 +39,34 @@
   font-size: 0.95rem;
 }
 
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(45, 74, 62, 0.08);
+}
+
 .main {
   flex: 1;
   display: grid;
@@ -48,6 +76,11 @@
   margin: 0 auto;
   padding: 2rem 1.5rem;
   width: 100%;
+}
+
+.main--single {
+  grid-template-columns: 1fr;
+  max-width: 1400px;
 }
 
 @media (max-width: 900px) {
@@ -218,6 +251,58 @@
   font-size: 0.9rem;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+.feature-store-section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  width: 100%;
+}
+
+.feature-store-section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.feature-store-section .hint {
+  margin: 0 0 1rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.feature-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.feature-table th,
+.feature-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.feature-table th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.feature-table td.product-id {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.feature-table tbody tr:hover {
+  background: rgba(45, 74, 62, 0.04);
 }
 
 .footer {

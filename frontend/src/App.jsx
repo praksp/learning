@@ -3,6 +3,11 @@ import './App.css'
 
 const API_BASE = '/api'
 
+const TABS = [
+  { id: 'predict', label: 'Price Predictor' },
+  { id: 'features', label: 'Feature Store' },
+]
+
 const CATEGORIES = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Footwear']
 const BRANDS = ['Zara', 'H&M', 'Levi\'s', 'Uniqlo', 'Converse', 'North Face', 'Mango', 'Massimo Dutti', 'Steve Madden']
 const SUBCATEGORIES = ['T-Shirts', 'Sweaters', 'Coats', 'Jackets', 'Jeans', 'Pants', 'Dresses', 'Boots', 'Sneakers', 'Tops']
@@ -32,7 +37,60 @@ const defaultProduct = {
 
 const defaultPrices = getLast7Days().map(date => ({ date, price_usd: '' }))
 
+function FeatureStoreView() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetch(`${API_BASE}/features`)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error(res.statusText)))
+      .then(json => { if (!cancelled) setData(json) })
+      .catch(e => { if (!cancelled) setError(e.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading) return <main className="main main--single"><p className="status">Loading feature store…</p></main>
+  if (error) return <main className="main main--single"><p className="error">{error}</p></main>
+  if (!data?.products?.length) return <main className="main main--single"><p className="hint">No features in store. Run generate_feast_data.py and feast materialize.</p></main>
+
+  const featureNames = data.feature_names || []
+  return (
+    <main className="main main--single">
+      <section className="feature-store-section">
+        <h2>Feature Store</h2>
+        <p className="hint">Features for price prediction model (from Feast)</p>
+        <div className="table-wrap">
+          <table className="feature-table">
+            <thead>
+              <tr>
+                <th>Product ID</th>
+                {featureNames.map(f => <th key={f}>{f}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {data.products.map((row, i) => (
+                <tr key={row.product_id || i}>
+                  <td className="product-id">{row.product_id}</td>
+                  {featureNames.map(f => (
+                    <td key={f}>{row[f] != null ? (typeof row[f] === 'number' ? row[f].toFixed(2) : row[f]) : '—'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  )
+}
+
 function App() {
+  const [activeTab, setActiveTab] = useState('predict')
   const [product, setProduct] = useState(defaultProduct)
   const [prices, setPrices] = useState(defaultPrices)
   const [prediction, setPrediction] = useState(null)
@@ -103,8 +161,20 @@ function App() {
       <header className="header">
         <h1>Fashion Price Predictor</h1>
         <p>Add product data and see price drop predictions in real time</p>
+        <nav className="tabs">
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              className={`tab ${activeTab === id ? 'active' : ''}`}
+              onClick={() => setActiveTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
       </header>
 
+      {activeTab === 'predict' && (
       <main className="main">
         <section className="form-section">
           <h2>Product details</h2>
@@ -221,6 +291,11 @@ function App() {
           )}
         </section>
       </main>
+      )}
+
+      {activeTab === 'features' && (
+        <FeatureStoreView />
+      )}
 
       <footer className="footer">
         <p>Fashion Price Prediction · Powered by scikit-learn</p>

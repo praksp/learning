@@ -99,6 +99,64 @@ def health():
     return {"status": "ok", "model_loaded": _model is not None}
 
 
+FEATURE_NAMES = [
+    "price_min_7d", "price_max_7d", "price_mean_7d", "price_std_7d",
+    "price_change_7d", "price_change_pct_7d", "price_volatility_7d",
+    "num_price_drops_7d", "original_price_usd",
+    "category_cat", "brand_cat", "subcategory_cat", "color_cat", "season_cat",
+    "price_dropped",
+]
+
+
+@app.get("/api/features")
+def list_all_features():
+    """List all products with their features from the Feast feature store."""
+    try:
+        products_df = pd.read_csv(ROOT / "data" / "products.csv")
+        product_ids = products_df["product_id"].tolist()
+        if not product_ids:
+            return {"products": [], "feature_names": []}
+
+        from feast import FeatureStore
+        store = FeatureStore(repo_path=str(ROOT / "feature_repo" / "feature_repo"))
+        feature_refs = [f"fashion_price_features:{f}" for f in FEATURE_NAMES]
+        entity_rows = [{"product_id": pid} for pid in product_ids]
+        result = store.get_online_features(
+            features=feature_refs,
+            entity_rows=entity_rows,
+        ).to_dict()
+
+        # Build list of {product_id, ...features}
+        rows = []
+        for i, pid in enumerate(result["product_id"]):
+            row = {"product_id": pid}
+            for name in FEATURE_NAMES:
+                val = result.get(name)
+                if val is not None:
+                    v = val[i] if isinstance(val, list) else val
+                    row[name] = round(float(v), 4) if isinstance(v, (int, float)) and not isinstance(v, bool) else v
+            rows.append(row)
+        return {"products": rows, "feature_names": FEATURE_NAMES}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/features/{product_id}")
+def get_features(product_id: str):
+    """Fetch features for a single product from the Feast feature store."""
+    try:
+        from feast import FeatureStore
+        store = FeatureStore(repo_path=str(ROOT / "feature_repo" / "feature_repo"))
+        feature_refs = [f"fashion_price_features:{f}" for f in FEATURE_NAMES]
+        result = store.get_online_features(
+            features=feature_refs,
+            entity_rows=[{"product_id": product_id}],
+        ).to_dict()
+        return {k: v[0] if v else None for k, v in result.items()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/predict", response_model=PredictionResponse)
 def predict(product: ProductInput):
     """Predict price drop likelihood for a fashion item with its 7-day price history."""
