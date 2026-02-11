@@ -39,10 +39,22 @@ npm install --prefix frontend
 
 ## Usage
 
-**1. Train the model (one-time):**
+**1. Generate training data (3200 samples, region/age_group/seasonality):**
+
+```bash
+python scripts/generate_training_data.py
+```
+
+**2. Train the model (MLflow-tracked):**
 
 ```bash
 python scripts/train.py
+```
+
+**3. Run full MLflow CI/CD pipeline:**
+
+```bash
+python scripts/mlflow_pipeline.py [--regenerate-data] [--mlflow-tracking-uri URI]
 ```
 
 **2. Start the API:**

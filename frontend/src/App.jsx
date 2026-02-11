@@ -13,6 +13,8 @@ const BRANDS = ['Zara', 'H&M', 'Levi\'s', 'Uniqlo', 'Converse', 'North Face', 'M
 const SUBCATEGORIES = ['T-Shirts', 'Sweaters', 'Coats', 'Jackets', 'Jeans', 'Pants', 'Dresses', 'Boots', 'Sneakers', 'Tops']
 const COLORS = ['Black', 'White', 'Navy', 'Gray', 'Blue', 'Brown', 'Pink', 'Cream']
 const SEASONS = ['All', 'Spring', 'Summer', 'Fall', 'Winter']
+const REGIONS = ['North', 'South', 'East', 'West', 'International']
+const AGE_GROUPS = ['18-24', '25-34', '35-44', '45-54', '55+']
 
 function getLast7Days() {
   const days = []
@@ -33,15 +35,40 @@ const defaultProduct = {
   color: 'Black',
   original_price_usd: '',
   season: 'All',
+  region: 'North',
+  age_group: '25-34',
   inventory_level: 50,
 }
 
 const defaultPrices = getLast7Days().map(date => ({ date, price_usd: '' }))
 
+function ModelMetrics({ metrics, onRefresh }) {
+  if (!metrics) return null
+  const { f1, accuracy, n_samples } = metrics
+  if (f1 == null && accuracy == null) return null
+  return (
+    <div className="model-metrics">
+      {f1 != null && <span title="F1 score">F1: {(f1 * 100).toFixed(1)}%</span>}
+      {accuracy != null && <span title="Accuracy">Acc: {(accuracy * 100).toFixed(1)}%</span>}
+      {n_samples != null && <span>n={n_samples}</span>}
+      {onRefresh && (
+        <button type="button" className="refresh-btn" onClick={onRefresh} title="Retrain model">
+          Retrain
+        </button>
+      )}
+    </div>
+  )
+}
+
 function FeatureStoreView() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const refetch = useCallback(() => {
+    setRefreshKey(k => k + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -53,7 +80,7 @@ function FeatureStoreView() {
       .catch(e => { if (!cancelled) setError(e.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [refreshKey])
 
   if (loading) return <main className="main main--single"><p className="status">Loading feature store…</p></main>
   if (error) return <main className="main main--single"><p className="error">{error}</p></main>
@@ -63,8 +90,13 @@ function FeatureStoreView() {
   return (
     <main className="main main--single">
       <section className="feature-store-section">
-        <h2>Feature Store</h2>
-        <p className="hint">Features for price prediction model (from Feast)</p>
+        <div className="feature-store-header">
+          <div>
+            <h2>Feature Store</h2>
+            <p className="hint">Features for price prediction model (from Feast)</p>
+          </div>
+          <button type="button" className="refresh-btn" onClick={refetch}>Refresh</button>
+        </div>
         <div className="table-wrap">
           <table className="feature-table">
             <thead>
@@ -97,6 +129,17 @@ function App() {
   const [prediction, setPrediction] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [metrics, setMetrics] = useState(null)
+  const [addRetrainLoading, setAddRetrainLoading] = useState(false)
+
+  const fetchMetrics = useCallback(() => {
+    fetch(`${API_BASE}/model/metrics`)
+      .then(res => res.ok ? res.json() : null)
+      .then(setMetrics)
+      .catch(() => setMetrics(null))
+  }, [])
+
+  useEffect(() => { fetchMetrics() }, [fetchMetrics])
 
   const canPredict = product.name.trim() &&
     product.original_price_usd > 0 &&
@@ -116,6 +159,8 @@ function App() {
         body: JSON.stringify({
           ...product,
           original_price_usd: Number(product.original_price_usd),
+          region: product.region || 'North',
+          age_group: product.age_group || '25-34',
           price_history: prices.map(p => ({
             date: p.date,
             price_usd: Number(p.price_usd),
@@ -157,11 +202,61 @@ function App() {
     setError(null)
   }
 
+  const addProductAndRetrain = async () => {
+    if (!canPredict) return
+    setAddRetrainLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...product,
+          original_price_usd: Number(product.original_price_usd),
+          region: product.region || 'North',
+          age_group: product.age_group || '25-34',
+          inventory_level: product.inventory_level,
+          price_history: prices.map(p => ({ date: p.date, price_usd: Number(p.price_usd) })),
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || res.statusText)
+      }
+      const data = await res.json()
+      setMetrics({ f1: data.f1, accuracy: data.accuracy, n_samples: data.n_samples })
+      resetForm()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setAddRetrainLoading(false)
+    }
+  }
+
+  const retrainModel = async () => {
+    setAddRetrainLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE}/retrain`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || res.statusText)
+      }
+      const data = await res.json()
+      setMetrics({ f1: data.f1, accuracy: data.accuracy, n_samples: data.n_samples })
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setAddRetrainLoading(false)
+    }
+  }
+
   return (
     <div className="app">
       <header className="header">
         <h1>Fashion Price Predictor</h1>
         <p>Add product data and see price drop predictions in real time</p>
+        <ModelMetrics metrics={metrics} onRefresh={retrainModel} />
         <nav className="tabs">
           {TABS.map(({ id, label }) => (
             <button
@@ -233,6 +328,18 @@ function App() {
                 </select>
               </label>
               <label>
+                Region
+                <select value={product.region} onChange={e => updateProduct('region', e.target.value)}>
+                  {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </label>
+              <label>
+                Age group
+                <select value={product.age_group} onChange={e => updateProduct('age_group', e.target.value)}>
+                  {AGE_GROUPS.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+              <label>
                 Original price (USD)
                 <input
                   type="number"
@@ -275,7 +382,16 @@ function App() {
               </label>
             ))}
           </div>
-          <button className="reset-btn" onClick={resetForm}>Reset form</button>
+          <div className="form-actions">
+            <button className="reset-btn" onClick={resetForm}>Reset form</button>
+            <button
+              className="add-retrain-btn"
+              onClick={addProductAndRetrain}
+              disabled={!canPredict || addRetrainLoading}
+            >
+              {addRetrainLoading ? 'Retraining…' : 'Add product & retrain'}
+            </button>
+          </div>
         </section>
 
         <section className="prediction-section">

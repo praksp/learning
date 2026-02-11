@@ -7,4 +7,6 @@ venv/
 .env
 *.pkl
 artifacts/
+mlruns/
+mlartifacts/
 .DS_Store

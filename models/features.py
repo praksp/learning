@@ -6,17 +6,21 @@ import pandas as pd
 # Default category mappings (from training data) for API use when new products have known categories
 DEFAULT_CATEGORY_MAPPINGS = {
     "category": {"Outerwear": 0, "Tops": 1, "Footwear": 2, "Bottoms": 3, "Dresses": 4},
-    "brand": {"Zara": 0, "H&M": 1, "Steve Madden": 2, "Levi's": 3, "Uniqlo": 4, "Converse": 5, "North Face": 6, "Mango": 7, "Massimo Dutti": 8},
-    "subcategory": {"Coats": 0, "T-Shirts": 1, "Boots": 2, "Jeans": 3, "Dresses": 4, "Sweaters": 5, "Sneakers": 6, "Jackets": 7, "Tops": 8, "Pants": 9},
-    "color": {"Black": 0, "White": 1, "Brown": 2, "Blue": 3, "Pink": 4, "Gray": 5, "Cream": 6, "Navy": 7},
-    "season": {"Fall": 0, "All": 1, "Spring": 2, "Winter": 3},
+    "brand": {"Zara": 0, "H&M": 1, "Steve Madden": 2, "Levi's": 3, "Uniqlo": 4, "Converse": 5, "North Face": 6, "Mango": 7, "Massimo Dutti": 8, "Nike": 9, "Adidas": 10, "Gap": 11},
+    "subcategory": {"Coats": 0, "T-Shirts": 1, "Boots": 2, "Jeans": 3, "Dresses": 4, "Sweaters": 5, "Sneakers": 6, "Jackets": 7, "Tops": 8, "Pants": 9, "Blouses": 10, "Hoodies": 11, "Shorts": 12, "Skirts": 13, "Casual": 14, "Evening": 15, "Maxi": 16, "Midi": 17, "Blazers": 18, "Vests": 19, "Sandals": 20, "Loafers": 21},
+    "color": {"Black": 0, "White": 1, "Brown": 2, "Blue": 3, "Pink": 4, "Gray": 5, "Cream": 6, "Navy": 7, "Red": 8, "Green": 9},
+    "season": {"Fall": 0, "All": 1, "Spring": 2, "Winter": 3, "Summer": 4},
+    "region": {"North": 0, "South": 1, "East": 2, "West": 3, "International": 4},
+    "age_group": {"18-24": 0, "25-34": 1, "35-44": 2, "45-54": 3, "55+": 4},
 }
+
+CATEGORICAL_COLS = ["category", "brand", "subcategory", "color", "season", "region", "age_group"]
 
 
 def _encode_categoricals(df: pd.DataFrame, mappings: dict | None = None) -> pd.DataFrame:
     """Encode categorical columns using provided mappings or fallback to pandas codes."""
     mappings = mappings or {}
-    for col in ["category", "brand", "subcategory", "color", "season"]:
+    for col in CATEGORICAL_COLS:
         if col not in df.columns:
             continue
         cat_map = mappings.get(col) or DEFAULT_CATEGORY_MAPPINGS.get(col)

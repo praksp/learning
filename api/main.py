@@ -33,7 +33,8 @@ class ProductInput(BaseModel):
     color: str
     original_price_usd: float = Field(..., ge=0)
     season: str = Field(..., description="e.g. All, Fall, Spring, Winter")
-     # Inventory level: 1 (very low) – 100 (very high)
+    region: str = Field("North", description="e.g. North, South, East, West, International")
+    age_group: str = Field("25-34", description="e.g. 18-24, 25-34, 35-44, 45-54, 55+")
     inventory_level: int = Field(..., ge=1, le=100, description="Inventory level from 1 (low) to 100 (high)")
     price_history: list[PriceDay] = Field(
         ...,
@@ -110,13 +111,100 @@ def health():
     return {"status": "ok", "model_loaded": _model is not None}
 
 
+@app.get("/api/model/metrics")
+def get_model_metrics():
+    """Return model F1 and accuracy from last training run."""
+    metrics_path = ROOT / "artifacts" / "model_metrics.json"
+    if not metrics_path.exists():
+        return {"f1": None, "accuracy": None, "n_samples": None}
+    import json
+    with open(metrics_path) as f:
+        return json.load(f)
+
+
+def _run_retrain():
+    """Retrain model, refresh Feast, reload in-memory model. Returns metrics."""
+    import subprocess
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "train.py")],
+        cwd=str(ROOT),
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "generate_feast_data.py")],
+        cwd=str(ROOT),
+        capture_output=True,
+        check=True,
+    )
+    feat_repo = ROOT / "feature_repo" / "feature_repo"
+    subprocess.run(["feast", "apply"], cwd=str(feat_repo), capture_output=True, check=True)
+    subprocess.run(
+        ["feast", "materialize", "2025-02-01", "2025-02-09"],
+        cwd=str(feat_repo),
+        capture_output=True,
+        check=True,
+    )
+    load_model()
+    return get_model_metrics()
+
+
+@app.post("/api/retrain")
+def retrain():
+    """Retrain model from current data files. Refreshes Feast. Returns metrics."""
+    try:
+        metrics = _run_retrain()
+        return {"status": "ok", **metrics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/products")
+def add_product_and_retrain(product: ProductInput):
+    """Add product to data files, retrain model, refresh Feast. Returns metrics."""
+    try:
+        products_path = ROOT / "data" / "products.csv"
+        price_path = ROOT / "data" / "price_history.csv"
+        inv_path = ROOT / "data" / "inventory.csv"
+
+        # Append to products
+        new_row = pd.DataFrame([{
+            "product_id": product.product_id,
+            "name": product.name,
+            "category": product.category,
+            "brand": product.brand,
+            "subcategory": product.subcategory,
+            "color": product.color,
+            "original_price_usd": product.original_price_usd,
+            "season": product.season,
+            "region": getattr(product, "region", "North"),
+            "age_group": getattr(product, "age_group", "25-34"),
+        }])
+        pd.concat([pd.read_csv(products_path), new_row], ignore_index=True).to_csv(products_path, index=False)
+
+        # Append to price_history
+        price_rows = pd.DataFrame([
+            {"product_id": product.product_id, "date": p.date, "price_usd": p.price_usd}
+            for p in product.price_history
+        ])
+        pd.concat([pd.read_csv(price_path), price_rows], ignore_index=True).to_csv(price_path, index=False)
+
+        # Append to inventory
+        inv_row = pd.DataFrame([{"product_id": product.product_id, "inventory_level": product.inventory_level}])
+        pd.concat([pd.read_csv(inv_path), inv_row], ignore_index=True).to_csv(inv_path, index=False)
+
+        metrics = _run_retrain()
+        return {"status": "ok", "product_id": product.product_id, **metrics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 FEATURE_NAMES = [
     "price_min_7d", "price_max_7d", "price_mean_7d", "price_std_7d",
     "price_change_7d", "price_change_pct_7d", "price_volatility_7d",
     "num_price_drops_7d", "original_price_usd",
     "category_cat", "brand_cat", "subcategory_cat", "color_cat", "season_cat",
-    "inventory_level",
-    "price_dropped",
+    "region_cat", "age_group_cat", "inventory_level", "price_dropped",
 ]
 
 
@@ -185,6 +273,8 @@ def predict(product: ProductInput):
         "color": product.color,
         "original_price_usd": product.original_price_usd,
         "season": product.season,
+        "region": product.region,
+        "age_group": product.age_group,
     }])
     price_df = pd.DataFrame([
         {"product_id": product.product_id, "date": p.date, "price_usd": p.price_usd}

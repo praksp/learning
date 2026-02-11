@@ -24,7 +24,8 @@ FEATURE_COLS = [
     "subcategory_cat",
     "color_cat",
     "season_cat",
-    # Dynamic feature provided at prediction time
+    "region_cat",
+    "age_group_cat",
     "inventory_level",
 ]
 
