@@ -1,0 +1,11 @@
+product_id,name,category,brand,subcategory,color,original_price_usd,season
+P001,Classic Wool Coat,Outerwear,Zara,Coats,Black,189.99,Fall
+P002,Cotton T-Shirt Basic,Tops,H&M,T-Shirts,White,14.99,All
+P003,Leather Ankle Boots,Footwear,Steve Madden,Boots,Brown,129.99,Fall
+P004,Slim Fit Denim Jeans,Bottoms,Levi's,Jeans,Blue,79.99,All
+P005,Floral Maxi Dress,Dresses,Zara,Dresses,Pink,89.99,Spring
+P006,Cashmere Sweater,Tops,Uniqlo,Sweaters,Gray,79.99,Winter
+P007,Sneakers White Classic,Footwear,Converse,Sneakers,White,65.00,All
+P008,Quilted Jacket,Outerwear,North Face,Jackets,Black,199.99,Winter
+P009,Silk Blouse,Tops,Mango,Tops,Cream,49.99,All
+P010,High-Waist Trousers,Bottoms,Massimo Dutti,Pants,Navy,119.99,All

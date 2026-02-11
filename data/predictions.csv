@@ -1,0 +1,11 @@
+product_id,name,category,brand,price_last_day,price_change_pct_7d,prob_price_drop,predicted_drop
+P001,Classic Wool Coat,Outerwear,Zara,169.99,-10.526869835254486,0.9999954843020168,1
+P002,Cotton T-Shirt Basic,Tops,H&M,12.99,-13.342228152101402,0.9999954843020168,1
+P003,Leather Ankle Boots,Footwear,Steve Madden,109.99,-15.385798907608287,0.9999954843020168,1
+P005,Floral Maxi Dress,Dresses,Zara,69.99,-22.2246916324036,0.9999954843020168,1
+P006,Cashmere Sweater,Tops,Uniqlo,59.99,-25.003125390673826,0.9999954843020168,1
+P007,Sneakers White Classic,Footwear,Converse,55.0,-15.384615384615385,0.9999954843020168,1
+P008,Quilted Jacket,Outerwear,North Face,179.99,-10.00050002500125,0.9999954843020168,1
+P009,Silk Blouse,Tops,Mango,44.99,-10.002000400080016,0.9999954843020168,1
+P010,High-Waist Trousers,Bottoms,Massimo Dutti,99.99,-16.668055671305943,0.9999954843020168,1
+P004,Slim Fit Denim Jeans,Bottoms,Levi's,79.99,0.0,3.564063417914129e-05,0
