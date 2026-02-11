@@ -33,6 +33,8 @@ class ProductInput(BaseModel):
     color: str
     original_price_usd: float = Field(..., ge=0)
     season: str = Field(..., description="e.g. All, Fall, Spring, Winter")
+     # Inventory level: 1 (very low) – 100 (very high)
+    inventory_level: int = Field(..., ge=1, le=100, description="Inventory level from 1 (low) to 100 (high)")
     price_history: list[PriceDay] = Field(
         ...,
         min_length=1,
@@ -47,6 +49,15 @@ class PredictionResponse(BaseModel):
     prob_price_drop: float = Field(..., ge=0, le=1)
     price_change_pct_7d: float | None
     recommendation: str = Field(..., description="Human-readable recommendation")
+    # Inventory-aware dynamic pricing suggestion
+    recommended_price: float | None = Field(
+        default=None,
+        description="Suggested price based on inventory level and price-drop risk",
+    )
+    recommended_discount_pct: float | None = Field(
+        default=None,
+        description="Suggested discount percentage versus current price",
+    )
 
 
 # --- Model loader ---
@@ -104,6 +115,7 @@ FEATURE_NAMES = [
     "price_change_7d", "price_change_pct_7d", "price_volatility_7d",
     "num_price_drops_7d", "original_price_usd",
     "category_cat", "brand_cat", "subcategory_cat", "color_cat", "season_cat",
+    "inventory_level",
     "price_dropped",
 ]
 
@@ -184,12 +196,29 @@ def predict(product: ProductInput):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    # Inject current inventory level as a dynamic feature
+    features_df["inventory_level"] = product.inventory_level
+
     proba = _model.predict_proba(features_df)
     pred = _model.predict(features_df)
 
     prob_drop = float(proba["prob_drop"].iloc[0])
     pred_drop = int(pred.iloc[0])
     change_pct = features_df["price_change_pct_7d"].iloc[0] if "price_change_pct_7d" in features_df.columns else None
+
+    # Simple inventory-aware dynamic pricing heuristic
+    # Base on last observed price when available, otherwise original price
+    base_price = (
+        float(features_df.get("price_last_day", pd.Series([product.original_price_usd])).iloc[0])
+        if "price_last_day" in features_df.columns
+        else float(product.original_price_usd)
+    )
+    inv_norm = product.inventory_level / 100.0  # 0–1
+    # Higher inventory and higher drop probability → larger discount
+    raw_discount = 0.5 * prob_drop + 0.4 * inv_norm
+    discount = max(0.0, min(raw_discount, 0.5))  # cap at 50%
+    recommended_price = round(base_price * (1 - discount), 2)
+    recommended_discount_pct = round(discount * 100, 1)
 
     if prob_drop >= 0.7:
         rec = "High likelihood of price drop — consider waiting or highlighting for deal seekers"
@@ -204,4 +233,6 @@ def predict(product: ProductInput):
         prob_price_drop=round(prob_drop, 4),
         price_change_pct_7d=round(change_pct, 2) if change_pct is not None and not pd.isna(change_pct) else None,
         recommendation=rec,
+        recommended_price=recommended_price,
+        recommended_discount_pct=recommended_discount_pct,
     )

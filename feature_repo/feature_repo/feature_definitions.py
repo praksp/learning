@@ -40,6 +40,7 @@ fashion_price_features = FeatureView(
         Field(name="subcategory_cat", dtype=Int64),
         Field(name="color_cat", dtype=Int64),
         Field(name="season_cat", dtype=Int64),
+        Field(name="inventory_level", dtype=Int64, description="Inventory level 1-100"),
         Field(name="price_dropped", dtype=Int64, description="Target: 1 if price dropped"),
     ],
     online=True,

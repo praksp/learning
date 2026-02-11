@@ -8,8 +8,8 @@ k
 K
 productFashion product identifier"
 product_idJfashion_price_prediction
-Ü³ÌğÏ–Ü³ÌğÏ–1"$fdcb13f7-4644-4c6f-b8c8-223fc0fabba0*—³Ì¨÷ëF2Æ
-ê
+Ü³ÌğÏ–Ü³ÌğÏ–1"$8321fd44-03f2-4466-b0bd-2296fd4850e3*Ùç³Ì¸ˆôX2–
+–
 fashion_price_featuresfashion_price_predictionproduct"
 price_min_7d"
 price_max_7d"
@@ -25,17 +25,20 @@ product_idJfashion_price_prediction
 subcategory_cat"
 	color_cat"
 
-season_cat"-
+season_cat"*
+inventory_level"Inventory level 1-100"-
 price_dropped"Target: 1 if price dropped*
-teamprice_prediction2€£:¶event_timestamp*createdZ%#data/fashion_price_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_source’Ü³ÌĞñĞŒ"Ü³ÌÈÂ‹–@b
+teamprice_prediction2€£:¶event_timestamp*createdZ%#data/fashion_price_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_source’Öç³Ì¸ëÄÔ"Öç³Ì¸ëÄÔ@b
 
-product_idW
-Ü³Ìè–¤–—³Ì¸øÛF
+product_id{
+Ü³Ìè–¤–Ùç³ÌÀßäX
 èú­Ì°½÷«æ³Ì
 æ³Ì€àŸ½
-€Èõ¼€àŸ½:õ
-Ô
-price_predictionfashion_price_predictionó
+€Èõ¼€àŸ½
+€Èõ¼€àŸ½
+€Èõ¼€àŸ½:¡
+€
+price_predictionfashion_price_predictionŸ
 fashion_price_features
 price_min_7d
 price_max_7d
@@ -51,9 +54,10 @@ product_idW
 subcategory_cat
 	color_cat
 
-season_cat-
-price_dropped"Target: 1 if price dropped*created:createdB‚event_timestamp*createdZ%#data/fashion_price_features.parquet¢fashion_price_features_source’Ü³ÌĞñĞŒ"Ü³ÌÈÂ‹–*0Features for fashion price drop prediction model
-Ü³ÌĞâ·–Ü³ÌĞâ·–RÀ
+season_cat*
+inventory_level"Inventory level 1-100-
+price_dropped"Target: 1 if price dropped*created:createdB‚event_timestamp*createdZ%#data/fashion_price_features.parquet¢fashion_price_features_source’Öç³Ì¸ëÄÔ"Öç³Ì¸ëÄÔ*0Features for fashion price drop prediction model
+Ü³ÌĞâ·–Öç³ÌàÚÉÜRÀ
 ½
 ,feast.infra.online_stores.sqlite.SqliteTable"Œ
 Y/Users/prakash/ml-learning/cursor/learning/feature_repo/feature_repo/data/online_store.db/fashion_price_prediction_fashion_price_featuresbÑevent_timestamp*createdZ%#data/fashion_price_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢fashion_price_features_sourceªfashion_price_prediction’Ü³ÌĞñĞŒ"Ü³ÌÈÂ‹–Š:

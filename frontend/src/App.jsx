@@ -33,6 +33,7 @@ const defaultProduct = {
   color: 'Black',
   original_price_usd: '',
   season: 'All',
+  inventory_level: 50,
 }
 
 const defaultPrices = getLast7Days().map(date => ({ date, price_usd: '' }))
@@ -242,6 +243,19 @@ function App() {
                   placeholder="e.g. 89.99"
                 />
               </label>
+              <label>
+                Inventory level
+                <div className="inventory-input">
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    value={product.inventory_level}
+                    onChange={e => updateProduct('inventory_level', Number(e.target.value))}
+                  />
+                  <span>{product.inventory_level}</span>
+                </div>
+              </label>
             </div>
           </form>
 
@@ -284,6 +298,21 @@ function App() {
                 <div className="metric">
                   <span className="label">7-day price change</span>
                   <span className="value">{prediction.price_change_pct_7d}%</span>
+                </div>
+              )}
+              <div className="metric">
+                <span className="label">Inventory level</span>
+                <span className="value">{product.inventory_level}/100</span>
+              </div>
+              {prediction.recommended_price != null && (
+                <div className="metric">
+                  <span className="label">Recommended price</span>
+                  <span className="value">
+                    ${prediction.recommended_price.toFixed(2)}
+                    {prediction.recommended_discount_pct != null && (
+                      <span className="subvalue"> ({prediction.recommended_discount_pct.toFixed(1)}% off)</span>
+                    )}
+                  </span>
                 </div>
               )}
               <p className="recommendation">{prediction.recommendation}</p>

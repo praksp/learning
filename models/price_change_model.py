@@ -24,6 +24,8 @@ FEATURE_COLS = [
     "subcategory_cat",
     "color_cat",
     "season_cat",
+    # Dynamic feature provided at prediction time
+    "inventory_level",
 ]
 
 TARGET_COL = "price_dropped"
