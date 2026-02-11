@@ -2,7 +2,11 @@
 
 import json
 import sys
+import warnings
 from pathlib import Path
+
+warnings.filterwarnings("ignore", message=".*pickle or cloudpickle format.*")
+warnings.filterwarnings("ignore", message=".*artifact_path.*deprecated.*")
 
 import mlflow
 import mlflow.sklearn
@@ -56,8 +60,12 @@ def main(
 
     df = build_features(products, price_history)
 
+    # Ensure artifacts directory exists (needed for CI/fresh clones)
+    artifacts_dir = Path(output_path).parent
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
     # Save category mappings for API inference
-    mappings_path = Path(output_path).parent / "category_mappings.json"
+    mappings_path = artifacts_dir / "category_mappings.json"
     _build_and_save_category_mappings(products, mappings_path)
 
     # Attach inventory snapshot for training if available
@@ -80,13 +88,15 @@ def main(
     model = PriceChangeModel()
     params = {"n_estimators": 100, "max_depth": 4, "learning_rate": 0.1}
 
+    model.fit(X_train, y_train)
+    y_pred_test = model.model.predict(X_test)
+    f1 = float(f1_score(y_test, y_pred_test, zero_division=0))
+    accuracy = float(accuracy_score(y_test, y_pred_test))
+
+    model.save(output_path)
+
     mlflow.set_experiment(MLFLOW_EXPERIMENT)
     with mlflow.start_run(run_name="train"):
-        model.fit(X_train, y_train)
-        y_pred_test = model.model.predict(X_test)
-        f1 = float(f1_score(y_test, y_pred_test, zero_division=0))
-        accuracy = float(accuracy_score(y_test, y_pred_test))
-
         mlflow.log_params({**params, "test_size": 0.2})
         mlflow.log_metrics({
             "f1": f1,
@@ -94,10 +104,9 @@ def main(
             "n_train": len(X_train),
             "n_test": len(X_test),
         })
-        mlflow.sklearn.log_model(model.model, "model")
-        mlflow.log_artifact(str(output_path), "artifacts")
-
-    model.save(output_path)
+        mlflow.sklearn.log_model(model.model, name="model")
+        if Path(output_path).exists():
+            mlflow.log_artifact(str(output_path), "artifacts")
     metrics_path = Path(output_path).parent / "model_metrics.json"
     metrics = {"f1": f1, "accuracy": accuracy, "n_samples": len(df), "n_train": len(X_train), "n_test": len(X_test)}
     with open(metrics_path, "w") as f:
