@@ -1,9 +1,17 @@
-"""Feature engineering for fashion price change prediction."""
+"""Feature engineering for fashion price change prediction.
 
+Builds numeric features from product metadata and 7-day price history:
+- Price stats (min, max, mean, std, change, volatility)
+- Count of price drops in window
+- Categorical encodings (category, brand, subcategory, color, season, region, age_group)
+- Inventory level
+"""
+
+import numpy as np
 import pandas as pd
 
 
-# Default category mappings (from training data) for API use when new products have known categories
+# Fallback mappings when training mappings unavailable; used for API inference on new products
 DEFAULT_CATEGORY_MAPPINGS = {
     "category": {"Outerwear": 0, "Tops": 1, "Footwear": 2, "Bottoms": 3, "Dresses": 4},
     "brand": {"Zara": 0, "H&M": 1, "Steve Madden": 2, "Levi's": 3, "Uniqlo": 4, "Converse": 5, "North Face": 6, "Mango": 7, "Massimo Dutti": 8, "Nike": 9, "Adidas": 10, "Gap": 11},
@@ -17,8 +25,35 @@ DEFAULT_CATEGORY_MAPPINGS = {
 CATEGORICAL_COLS = ["category", "brand", "subcategory", "color", "season", "region", "age_group"]
 
 
+def fill_missing_features(df: pd.DataFrame, feature_cols: list[str], random_state: int = 42) -> pd.DataFrame:
+    """Fill NaN feature values with random values in [col_min, col_max].
+    Uses column's observed range for plausible imputation; reproducible via random_state.
+    """
+    rng = np.random.default_rng(random_state)
+    out = df.copy()
+    for col in feature_cols:
+        if col not in out.columns:
+            continue
+        mask = out[col].isna()
+        if not mask.any():
+            continue
+        valid = out.loc[~mask, col]
+        if len(valid) == 0:
+            out[col] = out[col].fillna(0)
+            continue
+        vmin, vmax = valid.min(), valid.max()
+        if vmin == vmax:
+            out.loc[mask, col] = vmin
+        else:
+            n_missing = mask.sum()
+            out.loc[mask, col] = rng.uniform(vmin, vmax, size=n_missing)
+    return out
+
+
 def _encode_categoricals(df: pd.DataFrame, mappings: dict | None = None) -> pd.DataFrame:
-    """Encode categorical columns using provided mappings or fallback to pandas codes."""
+    """Encode categoricals to integer codes. Uses mappings if provided; else DEFAULT_CATEGORY_MAPPINGS
+    or pandas category codes. Unmapped values get -1.
+    """
     mappings = mappings or {}
     for col in CATEGORICAL_COLS:
         if col not in df.columns:
@@ -44,6 +79,7 @@ def build_features_single(
     price_history["date"] = pd.to_datetime(price_history["date"])
     price_history = price_history.sort_values(["product_id", "date"])
 
+    # Aggregate price stats per product over the price history window
     agg = (
         price_history.groupby("product_id")["price_usd"]
         .agg(["min", "max", "mean", "std", "first", "last", "count"])
@@ -62,7 +98,7 @@ def build_features_single(
         diff = g["price_usd"].diff()
         return (diff < 0).sum()
 
-    drops = price_history.groupby("product_id").apply(count_drops).reset_index()
+    drops = price_history.groupby("product_id").apply(count_drops, include_groups=False).reset_index()
     drops.columns = ["product_id", "num_price_drops_7d"]
     agg = agg.merge(drops, on="product_id", how="left")
 
@@ -105,12 +141,12 @@ def build_features(products: pd.DataFrame, price_history: pd.DataFrame) -> pd.Da
     agg["price_volatility_7d"] = agg["price_std_7d"].fillna(0)
     agg["price_dropped"] = (agg["price_change_7d"] < 0).astype(int)
 
-    # Count price drops (days where price decreased from previous day)
+    # Count days where price decreased from previous day
     def count_drops(g):
         diff = g["price_usd"].diff()
         return (diff < 0).sum()
 
-    drops = price_history.groupby("product_id").apply(count_drops).reset_index()
+    drops = price_history.groupby("product_id").apply(count_drops, include_groups=False).reset_index()
     drops.columns = ["product_id", "num_price_drops_7d"]
     agg = agg.merge(drops, on="product_id", how="left")
 

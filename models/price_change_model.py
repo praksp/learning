@@ -1,14 +1,20 @@
-"""Price change prediction model for fashion items."""
+"""Price change prediction model for fashion items.
+
+GradientBoostingClassifier to predict binary target: price_dropped (0/1).
+Features: price stats, categorical encodings, inventory_level.
+"""
 
 import pickle
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
 
 
+# Feature columns expected by the model (must match build_features output)
 FEATURE_COLS = [
     "price_min_7d",
     "price_max_7d",
@@ -29,7 +35,7 @@ FEATURE_COLS = [
     "inventory_level",
 ]
 
-TARGET_COL = "price_dropped"
+TARGET_COL = "price_dropped"  # 1 = price dropped in window, 0 = stable
 
 
 class PriceChangeModel:
@@ -46,9 +52,20 @@ class PriceChangeModel:
         self.target_col = TARGET_COL
 
     def _get_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Extract feature columns, filling missing with 0."""
+        """Extract feature columns. Fill NaNs with random values in [col_min, col_max]
+        for plausible inference when features are missing (e.g. new categories).
+        """
         cols = [c for c in self.feature_cols if c in df.columns]
-        return df[cols].fillna(0)
+        out = df[cols].copy()
+        rng = np.random.default_rng(42)
+        for col in cols:
+            mask = out[col].isna()
+            if mask.any():
+                valid = out[col].dropna()
+                vmin, vmax = (valid.min(), valid.max()) if len(valid) else (0, 0)
+                n = mask.sum()
+                out.loc[mask, col] = rng.uniform(vmin if vmin == vmax else vmin, vmax, size=n) if n else 0
+        return out.fillna(0)
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
         """Train the model."""

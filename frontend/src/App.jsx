@@ -6,6 +6,7 @@ const API_BASE = '/api'
 const TABS = [
   { id: 'predict', label: 'Price Predictor' },
   { id: 'features', label: 'Feature Store' },
+  { id: 'drift', label: 'Model Drift' },
 ]
 
 const CATEGORIES = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Footwear']
@@ -57,6 +58,125 @@ function ModelMetrics({ metrics, onRefresh }) {
         </button>
       )}
     </div>
+  )
+}
+
+function DriftView() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const refetch = useCallback(() => {
+    setRefreshKey(k => k + 1)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetch(`${API_BASE}/drift`)
+      .then(res => res.ok ? res.json() : Promise.reject(new Error(res.statusText)))
+      .then(json => { if (!cancelled) setData(json) })
+      .catch(e => { if (!cancelled) setError(e.message) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [refreshKey])
+
+  if (loading) return <main className="main main--single"><p className="status">Loading drift metrics…</p></main>
+  if (error) return <main className="main main--single"><p className="error">{error}</p></main>
+  if (!data) return <main className="main main--single"><p className="hint">No drift data.</p></main>
+
+  const {
+    drift_detected,
+    summary,
+    share_of_drifting_columns,
+    number_drifted_columns,
+    number_of_columns,
+    drift_share_threshold,
+    feature_drifts,
+    n_current_samples,
+    n_reference_samples,
+  } = data
+
+  const featureList = Object.entries(feature_drifts || {})
+
+  return (
+    <main className="main main--single">
+      <section className="drift-section">
+        <div className="drift-header">
+          <div>
+            <h2>Model Drift</h2>
+            <p className="hint">Evidently AI data drift monitoring vs training baseline</p>
+          </div>
+          <button type="button" className="refresh-btn" onClick={refetch}>Refresh</button>
+        </div>
+        <div className={`drift-status ${drift_detected ? 'drift-detected' : 'drift-ok'}`}>
+          <span className="drift-badge">{drift_detected ? 'Drift detected' : 'No drift'}</span>
+          <p className="drift-summary">{summary}</p>
+        </div>
+        <div className="drift-metrics">
+          <div className="drift-metric-card">
+            <span className="drift-metric-label">Share of drifting columns</span>
+            <span className="drift-metric-value">
+              {share_of_drifting_columns != null
+                ? `${(share_of_drifting_columns * 100).toFixed(1)}%`
+                : '—'}
+            </span>
+          </div>
+          <div className="drift-metric-card">
+            <span className="drift-metric-label">Drifted columns</span>
+            <span className="drift-metric-value">
+              {number_drifted_columns != null ? number_drifted_columns : '—'}
+              {number_of_columns != null && ` / ${number_of_columns}`}
+            </span>
+          </div>
+          <div className="drift-metric-card">
+            <span className="drift-metric-label">Threshold</span>
+            <span className="drift-metric-value">
+              {drift_share_threshold != null ? `${(drift_share_threshold * 100).toFixed(0)}%` : '—'}
+            </span>
+          </div>
+          <div className="drift-metric-card">
+            <span className="drift-metric-label">Current / Reference samples</span>
+            <span className="drift-metric-value">
+              {n_current_samples ?? '—'} / {n_reference_samples ?? '—'}
+            </span>
+          </div>
+        </div>
+        {featureList.length > 0 && (
+          <div className="drift-features">
+            <h3>Per-feature drift</h3>
+            <div className="table-wrap">
+              <table className="drift-table">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Drifted</th>
+                    <th>Drift score</th>
+                    <th>Method</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {featureList.map(([col, info]) => (
+                    <tr key={col} className={info.drifted ? 'drifted' : ''}>
+                      <td className="feature-name">{col}</td>
+                      <td>
+                        <span className={`badge ${info.drifted ? 'drop' : 'stable'}`}>
+                          {info.drifted ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td>{info.drift_score != null ? info.drift_score.toFixed(4) : '—'}</td>
+                      <td>{info.method || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+    </main>
   )
 }
 
@@ -440,6 +560,10 @@ function App() {
 
       {activeTab === 'features' && (
         <FeatureStoreView />
+      )}
+
+      {activeTab === 'drift' && (
+        <DriftView />
       )}
 
       <footer className="footer">

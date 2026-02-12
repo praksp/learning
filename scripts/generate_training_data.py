@@ -1,4 +1,9 @@
-"""Generate 3000+ training samples with region, age_group, and seasonality distribution."""
+"""Generate 3000+ training samples with region, age_group, and seasonality distribution.
+
+Creates products.csv, price_history.csv, inventory.csv with realistic distributions:
+seasonal weights (more Fall/Winter outerwear), region/age_group weights.
+Price history: 7 days per product with random walk (slight downward bias).
+"""
 
 import random
 import sys
@@ -26,7 +31,7 @@ REGIONS = ["North", "South", "East", "West", "International"]
 AGE_GROUPS = ["18-24", "25-34", "35-44", "45-54", "55+"]
 SEASONS = ["Spring", "Summer", "Fall", "Winter", "All"]
 
-# Seasonal weight: more Fall/Winter outerwear, more Summer dresses, etc.
+# Seasonal weights: more Fall/Winter outerwear, more Summer dresses, etc.
 SEASON_WEIGHTS = {
     "Spring": 0.2, "Summer": 0.2, "Fall": 0.25, "Winter": 0.25, "All": 0.1,
 }
@@ -35,6 +40,7 @@ AGE_WEIGHTS = {"18-24": 0.15, "25-34": 0.3, "35-44": 0.25, "45-54": 0.2, "55+": 
 
 
 def generate_products(n: int = 3200, seed: int = 42) -> pd.DataFrame:
+    """Generate n products with random attributes using weighted distributions."""
     random.seed(seed)
     rows = []
     for i in range(n):
@@ -66,6 +72,7 @@ def generate_products(n: int = 3200, seed: int = 42) -> pd.DataFrame:
 
 
 def generate_price_history(products: pd.DataFrame, base_date: str = "2025-02-01", seed: int = 42) -> pd.DataFrame:
+    """Generate 7-day price history per product. Random walk: -15% to +5% daily change."""
     random.seed(seed)
     rows = []
     for _, p in products.iterrows():
@@ -82,6 +89,7 @@ def generate_price_history(products: pd.DataFrame, base_date: str = "2025-02-01"
 
 
 def generate_inventory(products: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
+    """Generate inventory_level (5-95) per product."""
     random.seed(seed)
     return pd.DataFrame([
         {"product_id": p["product_id"], "inventory_level": random.randint(5, 95)}

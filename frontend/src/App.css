@@ -388,6 +388,135 @@
   background: rgba(45, 74, 62, 0.04);
 }
 
+/* Drift tab */
+.drift-section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  width: 100%;
+}
+
+.drift-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.drift-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.drift-status {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.drift-status.drift-ok {
+  background: #e5efe9;
+  border-color: var(--stable);
+}
+
+.drift-status.drift-detected {
+  background: #fde8e6;
+  border-color: var(--drop);
+}
+
+.drift-badge {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.drift-status.drift-ok .drift-badge {
+  color: var(--stable);
+}
+
+.drift-status.drift-detected .drift-badge {
+  color: var(--drop);
+}
+
+.drift-summary {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.drift-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.drift-metric-card {
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.drift-metric-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.drift-metric-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.drift-features h3 {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.drift-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.drift-table th,
+.drift-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.drift-table th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.drift-table td.feature-name {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+
+.drift-table tbody tr.drifted {
+  background: rgba(196, 69, 54, 0.06);
+}
+
+.drift-table tbody tr:hover {
+  background: rgba(45, 74, 62, 0.04);
+}
+
 .footer {
   padding: 1rem 1.5rem;
   text-align: center;

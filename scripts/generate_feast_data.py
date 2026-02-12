@@ -1,4 +1,9 @@
-"""Generate Parquet data for Feast feature store from products and price history."""
+"""Generate Parquet data for Feast feature store from products and price history.
+
+Reads products.csv, price_history.csv, inventory.csv -> build_features ->
+fills missing features -> adds event_timestamp/created for Feast -> writes parquet.
+Run after data changes; then feast apply and feast materialize.
+"""
 
 import sys
 from pathlib import Path
@@ -8,7 +13,8 @@ sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 
-from models.features import build_features
+from models.features import build_features, fill_missing_features
+from models.price_change_model import FEATURE_COLS
 
 
 def main():
@@ -21,13 +27,18 @@ def main():
 
     df = build_features(products, price_history)
 
-    # Attach inventory snapshot so it appears in the feature store
+    # Merge inventory for each product (required for feature store)
     if inventory is not None and "inventory_level" in inventory.columns:
         df = df.merge(inventory[["product_id", "inventory_level"]], on="product_id", how="left")
         if "inventory_level" in df.columns:
             df["inventory_level"] = df["inventory_level"].fillna(df["inventory_level"].median())
     else:
         df["inventory_level"] = 50
+
+    # Fill missing features with random values before saving
+    feat_cols = [c for c in FEATURE_COLS if c in df.columns]
+    df = fill_missing_features(df, feat_cols)
+    df[feat_cols] = df[feat_cols].fillna(0)
 
     # Feast requires event_timestamp (datetime) and created column
     price_history["date"] = pd.to_datetime(price_history["date"])

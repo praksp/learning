@@ -1,4 +1,8 @@
-"""REST API for fashion price change prediction."""
+"""REST API for fashion price change prediction.
+
+Endpoints: /api/health, /api/model/metrics, /api/drift, /api/predict, /api/features,
+/api/retrain, /api/products (add product + retrain). Loads model at startup.
+"""
 
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -17,7 +21,7 @@ from models.features import build_features_single
 from models.price_change_model import PriceChangeModel
 
 
-# --- Pydantic models ---
+# --- Request/response schemas ---
 
 class PriceDay(BaseModel):
     date: str = Field(..., description="Date in YYYY-MM-DD format")
@@ -61,13 +65,14 @@ class PredictionResponse(BaseModel):
     )
 
 
-# --- Model loader ---
+# --- In-memory model (loaded at startup) ---
 
 _model: PriceChangeModel | None = None
 _category_mappings: dict | None = None
 
 
 def load_model():
+    """Load pickle model and category mappings from artifacts/. Called at startup and after retrain."""
     global _model, _category_mappings
     model_path = ROOT / "artifacts" / "price_change_model.pkl"
     mappings_path = ROOT / "artifacts" / "category_mappings.json"
@@ -122,9 +127,53 @@ def get_model_metrics():
         return json.load(f)
 
 
+@app.get("/api/drift")
+def get_drift_status():
+    """Return Evidently AI drift observability: share of drifting columns, per-feature drift."""
+    try:
+        from models.drift_monitor import compute_drift, load_baseline
+        from models.features import build_features
+
+        if load_baseline() is None:
+            return {
+                "drift_detected": False,
+                "summary": "No baseline. Run train.py.",
+                "share_of_drifting_columns": None,
+                "number_drifted_columns": None,
+                "number_of_columns": None,
+                "feature_drifts": {},
+            }
+
+        products = pd.read_csv(ROOT / "data" / "products.csv")
+        price_history = pd.read_csv(ROOT / "data" / "price_history.csv")
+        if "region" not in products.columns:
+            products["region"] = "North"
+        if "age_group" not in products.columns:
+            products["age_group"] = "25-34"
+        try:
+            inventory = pd.read_csv(ROOT / "data" / "inventory.csv")
+            df = build_features(products, price_history)
+            df = df.merge(inventory[["product_id", "inventory_level"]], on="product_id", how="left")
+            df["inventory_level"] = df["inventory_level"].fillna(50)
+        except FileNotFoundError:
+            df = build_features(products, price_history)
+            df["inventory_level"] = 50
+
+        from models.price_change_model import FEATURE_COLS
+        feature_cols = [c for c in FEATURE_COLS if c in df.columns]
+        X = df[feature_cols].fillna(0)
+        return compute_drift(X)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 def _run_retrain():
-    """Retrain model, refresh Feast, reload in-memory model. Returns metrics."""
+    """Full retrain pipeline: train.py -> generate_feast_data -> feast apply -> feast materialize
+    (dynamic date range from parquet) -> reload model. Returns F1/accuracy/n_samples.
+    """
     import subprocess
+    from datetime import datetime, timedelta
+
     subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "train.py")],
         cwd=str(ROOT),
@@ -139,8 +188,22 @@ def _run_retrain():
     )
     feat_repo = ROOT / "feature_repo" / "feature_repo"
     subprocess.run(["feast", "apply"], cwd=str(feat_repo), capture_output=True, check=True)
+
+    # Use dynamic date range so newly added products get materialized
+    parquet_path = feat_repo / "data" / "fashion_price_features.parquet"
+    if parquet_path.exists():
+        pf = pd.read_parquet(parquet_path, columns=["event_timestamp"])
+        ts_min = pd.to_datetime(pf["event_timestamp"]).min()
+        ts_max = pd.to_datetime(pf["event_timestamp"]).max()
+        start_date = ts_min.strftime("%Y-%m-%d")
+        end_date = (ts_max + timedelta(days=1)).strftime("%Y-%m-%d")
+    else:
+        end = datetime.now()
+        start = end - timedelta(days=90)
+        start_date, end_date = start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+
     subprocess.run(
-        ["feast", "materialize", "2025-02-01", "2025-02-09"],
+        ["feast", "materialize", start_date, end_date],
         cwd=str(feat_repo),
         capture_output=True,
         check=True,
@@ -161,7 +224,7 @@ def retrain():
 
 @app.post("/api/products")
 def add_product_and_retrain(product: ProductInput):
-    """Add product to data files, retrain model, refresh Feast. Returns metrics."""
+    """Append product to products.csv, price_history.csv, inventory.csv; then run full retrain."""
     try:
         products_path = ROOT / "data" / "products.csv"
         price_path = ROOT / "data" / "price_history.csv"
@@ -199,6 +262,7 @@ def add_product_and_retrain(product: ProductInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Feature names for Feast online store lookup (must match feature_definitions.py)
 FEATURE_NAMES = [
     "price_min_7d", "price_max_7d", "price_mean_7d", "price_std_7d",
     "price_change_7d", "price_change_pct_7d", "price_volatility_7d",
@@ -263,7 +327,7 @@ def predict(product: ProductInput):
     if _model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    # Build DataFrames for feature engineering
+    # Convert request to DataFrames for build_features_single
     products_df = pd.DataFrame([{
         "product_id": product.product_id,
         "name": product.name,

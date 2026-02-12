@@ -11,10 +11,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def run(cmd: list[str], cwd: Path = ROOT) -> None:
+    """Run subprocess; exit on non-zero return."""
     result = subprocess.run(cmd, cwd=str(cwd), capture_output=False)
     if result.returncode != 0:
         sys.exit(result.returncode)
@@ -43,7 +46,19 @@ def main():
         run([sys.executable, str(ROOT / "scripts" / "generate_feast_data.py")])
         feat_repo = ROOT / "feature_repo" / "feature_repo"
         run(["feast", "apply"], cwd=feat_repo)
-        run(["feast", "materialize", "2025-02-01", "2025-02-09"], cwd=feat_repo)
+        # Materialize using parquet's event_timestamp range so new products are included
+        parquet_path = feat_repo / "data" / "fashion_price_features.parquet"
+        if parquet_path.exists():
+            pf = pd.read_parquet(parquet_path, columns=["event_timestamp"])
+            ts_min = pd.to_datetime(pf["event_timestamp"]).min()
+            ts_max = pd.to_datetime(pf["event_timestamp"]).max()
+            start_date = ts_min.strftime("%Y-%m-%d")
+            end_date = (ts_max + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        else:
+            end = pd.Timestamp.now()
+            start = end - pd.Timedelta(days=90)
+            start_date, end_date = start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+        run(["feast", "materialize", start_date, end_date], cwd=feat_repo)
 
     print("--- Pipeline complete ---")
 

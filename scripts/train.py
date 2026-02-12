@@ -1,4 +1,8 @@
-"""Train the fashion price change prediction model with MLflow tracking."""
+"""Train the fashion price change prediction model with MLflow tracking.
+
+Pipeline: load products/price_history/inventory -> build_features -> 80/20 split ->
+fit GradientBoosting -> save model, category_mappings, drift baseline, metrics.
+"""
 
 import json
 import sys
@@ -18,14 +22,15 @@ from sklearn.model_selection import train_test_split
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from models.features import build_features, CATEGORICAL_COLS
+from models.drift_monitor import compute_baseline
+from models.features import build_features, fill_missing_features, CATEGORICAL_COLS
 from models.price_change_model import PriceChangeModel, FEATURE_COLS, TARGET_COL
 
 MLFLOW_EXPERIMENT = "fashion_price_prediction"
 
 
 def _build_and_save_category_mappings(df: pd.DataFrame, output_path: Path) -> None:
-    """Build mappings from training data and save to JSON."""
+    """Build category->int mappings from training data for API inference on new products."""
     mappings = {}
     for col in CATEGORICAL_COLS:
         if col not in df.columns:
@@ -78,9 +83,10 @@ def main(
         df["inventory_level"] = 50
 
     feature_cols = [c for c in FEATURE_COLS if c in df.columns]
-    X = df[feature_cols].fillna(0)
+    X = fill_missing_features(df[feature_cols], feature_cols).fillna(0)
     y = df[TARGET_COL]
 
+    # 80/20 stratified split to preserve class balance
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
@@ -89,6 +95,7 @@ def main(
     params = {"n_estimators": 100, "max_depth": 4, "learning_rate": 0.1}
 
     model.fit(X_train, y_train)
+    compute_baseline(X_train)  # Save reference for drift monitoring
     y_pred_test = model.model.predict(X_test)
     f1 = float(f1_score(y_test, y_pred_test, zero_division=0))
     accuracy = float(accuracy_score(y_test, y_pred_test))
